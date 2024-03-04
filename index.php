@@ -16,18 +16,27 @@ if (isset($_POST['signup'])) {
         $_SESSION['message'] = 'Password Must be 8 Characters or More';
         header("location: signup.php");
     } else {
-        $checkEmail = "SELECT * FROM `portal_tb` WHERE email = '$email'";
-        $found = mysqli_query($connect, $checkEmail);
-        if (mysqli_num_rows($found) > 0) {
+        $checkEmail = "SELECT * FROM `portal_tb` WHERE email = ?";
+        // $found = mysqli_query($connect, $checkEmail);
+        $prepare = $connect->prepare($checkEmail);
+        $bind = $prepare->bind_param('s', $email);
+        $check = $prepare->execute();
+        $found = $prepare->get_result()->fetch_assoc();
+        if ($found > 0) {
             $_SESSION['message'] = '<div class="alert alert-danger text-center fw-bold">User Aready Exist!</div>';
             // $_SESSION['message'] = 'User Aready Exist!';
             header("location: signup.php");
         } else {
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $query = "INSERT INTO `portal_tb`(`firstname`, `lastname`, `email`, `address`, `password`) VALUES('$firstname', '$lastname', '$email', '$address', '$hashed')";
-            $result = mysqli_query($connect, $query);
+            // $query = "INSERT INTO `portal_tb`(`firstname`, `lastname`, `email`, `address`, `password`) VALUES('$firstname', '$lastname', '$email', '$address', '$hashed')";
+            // $result = mysqli_query($connect, $query);
+            $query = "INSERT INTO `portal_tb` (`firstname`, `lastname`, `email`, `address`, `password`) VALUES (?, ?, ?, ?, ?)";
+            $prepare = $connect->prepare($query);
+            $bind = $prepare->bind_param('sssss', $firstname, $lastname, $email, $address, $hashed);
+            $result = $prepare->execute();    
 
             if ($result) {
+                // echo 'Successful';
                 header('location: login.php');
             } else {
                 echo 'Oops! Something Went Wrong!';
@@ -44,12 +53,15 @@ if (isset($_POST['signIn'])) {
     $email = $_POST['email'];
     $password = $_POST['password'];
 
-    $query = "SELECT * FROM portal_tb WHERE email = '$email'";
-    $found = mysqli_query($connect, $query);
+    $query = "SELECT * FROM portal_tb WHERE email = ?";
+    // $found = mysqli_query($connect, $query);
     // print_r($found);
-    $result = mysqli_fetch_assoc($found);
+    $prepare = $connect->prepare($query);
+    $bind = $prepare->bind_param('s', $email);
+    $check = $prepare->execute();
+    $result = $prepare->get_result()->fetch_assoc();
 
-    if (mysqli_num_rows($found) > 0) {
+    if ($result > 0) {
         $verify = password_verify($password, $result['password']);
         if ($verify) {
             // echo "Password correct";
